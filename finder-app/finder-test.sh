@@ -2,6 +2,7 @@
 # Tester script for assignment 1 and assignment 2
 # Author: Siddhant Jajoo
 # Hanooshram (me) made changes to a few lines, uncommented 3 lines and changed writer.sh to just writer for assignment 2
+#for A3, I have commented the make lines - Hanooshram edited this
 set -e
 set -u
 
@@ -49,8 +50,8 @@ then
 	fi
 fi
 echo "Removing the old writer utility and compiling as a native application"
-make clean
-make
+#make clean
+#make
 
 for i in $( seq 1 $NUMFILES)
 do

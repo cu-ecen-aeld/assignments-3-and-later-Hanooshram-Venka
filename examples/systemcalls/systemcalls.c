@@ -1,4 +1,19 @@
+//Author - Hanooshram venkateswaran
+//File name - systemcalls.c
+//Attributions - referenced the link: https://stackoverflow.com/a/13784315/1446624 for the do_exec_redirect section of the code
+//Note - Added include header files to properly build using unit-test.sh script
+
+
+
+
 #include "systemcalls.h"
+
+#include <stdlib.h>    // For system(), exit(), EXIT_FAILURE
+#include <unistd.h>    // For fork(), execv(), close(), dup2()
+#include <sys/wait.h>  // For waitpid(), WIFEXITED, WEXITSTATUS
+#include <sys/types.h> // For pid_t type
+#include <fcntl.h>     // For open() and O_ flags
+#include <sys/stat.h>  // For file permissions
 
 /**
  * @param cmd the command to execute with system()
@@ -17,7 +32,21 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+int status = system(cmd);
+//This calls the system function to exe the command string, return value has the termination status of the  process
+
+if (status == -1) { // return value of -1 indicates system failure
+        return false;
+    }
+
+//status 0 indicates success, and WIFEXITED checks if the child process terminated normally
+if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        return true;
+    }
+
+
+// returns 'false' if the command failed
+    return false;
 }
 
 /**
@@ -45,9 +74,6 @@ bool do_exec(int count, ...)
         command[i] = va_arg(args, char *);
     }
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
-    command[count] = command[count];
 
 /*
  * TODO:
@@ -58,10 +84,31 @@ bool do_exec(int count, ...)
  *   as second argument to the execv() command.
  *
 */
+// flushes standard out before fork to avoid duplicate prints
+fflush(stdout);
 
+pid_t pid = fork();
+if (pid == -1) {
+//The fork failed
     va_end(args);
+    return false;
+} else if (pid == 0) {
+// child process executes the command
+    execv(command[0], command);
+// execv only returns if an error has occurred
+    exit(EXIT_FAILURE);
+}
 
-    return true;
+int status;
+// parent waits for the child process to terminate
+if (waitpid(pid, &status, 0) == -1) {
+    va_end(args);  
+    return false;
+}
+va_end(args);
+
+// returns true if the child terminated with exit code 0
+return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }
 
 /**
@@ -80,11 +127,6 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
         command[i] = va_arg(args, char *);
     }
     command[count] = NULL;
-    // this line is to avoid a compile warning before your implementation is complete
-    // and may be removed
-    command[count] = command[count];
-
-
 /*
  * TODO
  *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
@@ -93,7 +135,49 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *
 */
 
-    va_end(args);
 
-    return true;
+// Opens, creates and truncatesthe output file based on the condition
+    int fd = open(outputfile, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        // Failed to open the file
+        va_end(args);
+        return false;
+    }
+
+    // Flushes standard out before fork to avoid duplicate prints
+    fflush(stdout);
+
+    pid_t pid = fork();
+    if (pid == -1) {
+        // Fork failed
+        close(fd);
+        va_end(args);
+        return false;
+    } else if (pid == 0) {
+        // Child process logic
+        // Redirects standard out to the file descriptor (fd)
+        if (dup2(fd, 1) < 0) {
+            perror("dup2");
+            exit(EXIT_FAILURE);
+        }
+        // Closes the file descriptor
+        close(fd);
+
+        execv(command[0], command);
+        // execv only returns if an error has occurred
+        exit(EXIT_FAILURE);
+    }
+
+    // Parent process logic
+    close(fd); // Parent does not need the file descriptor
+    int status;
+    // Parent waits for the child process to terminate
+    if (waitpid(pid, &status, 0) == -1) {
+        va_end(args);
+        return false;
+    }
+
+    va_end(args);
+    // Returns true if the child terminated normally with exit code 0
+    return (WIFEXITED(status) && WEXITSTATUS(status) == 0);
 }

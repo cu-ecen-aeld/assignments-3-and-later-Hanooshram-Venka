@@ -1,12 +1,10 @@
-#File header - This is the script file for finder.sh
-
-#Attributions - Looked up on how to do recursive searches, brushed up on Linux flags and commands, discussed with peers regarding the basics of scripting
-
-
-
-
-
 #!/bin/sh
+
+
+
+
+
+
 
 # Verify that both the directory path and search string arguments are present, both arguments must be present
 if [ $# -lt 2 ]; then

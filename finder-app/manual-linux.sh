@@ -118,6 +118,21 @@ sudo mknod -m 600 dev/console c 5 1
 cd "${FINDER_APP_DIR}"
 make clean
 make CROSS_COMPILE=${CROSS_COMPILE}
+cp -a writer "${OUTDIR}/rootfs/home/"
+
+# TODO: Copy the finder related scripts and executables to the /home directory
+# on the target rootfs
+
+
+
+echo "Copying finder scripts and executables"
+cp -a finder.sh finder-test.sh ${OUTDIR}/rootfs/home/ 2>/dev/null 
+cp -a autorun-qemu.sh ${OUTDIR}/rootfs/home
+
+# TODO: Clean and build the writer utility
+cd "${FINDER_APP_DIR}"
+make clean
+make CROSS_COMPILE=${CROSS_COMPILE}
 cp writer "${OUTDIR}/rootfs/home/"
 
 # TODO: Copy the finder related scripts and executables to the /home directory
@@ -142,3 +157,4 @@ sudo chown -R root:root *
 find . | cpio -H newc -ov --owner root:root > "${OUTDIR}/initramfs.cpio"
 cd "${OUTDIR}"
 gzip -f initramfs.cpio
+
